@@ -1,219 +1,259 @@
 'use client'
-
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { callAIAgent } from '@/lib/aiAgent'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { FiSend, FiHeart, FiAlertTriangle, FiShield, FiUsers, FiEye } from 'react-icons/fi'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import AdBanner from './AdBanner'
+import { FiSend, FiHeart, FiAlertTriangle, FiShield, FiUsers, FiEye, FiScissors, FiGift } from 'react-icons/fi'
 
-const AGENT_ID = '69a42c6e0ffa5766cb153469'
-
-interface ChatMessage {
-  id: string
-  user: string
-  text: string
-  timestamp: string
-  moderation?: {
-    action?: string
-    reason?: string
-    severity?: string
-    flagged_content?: string
-    recommendation?: string
-  }
-}
-
-const initialMessages: ChatMessage[] = [
-  { id: '1', user: 'NightOwlGamer', text: 'This stream is amazing! Love the setup.', timestamp: '2m ago' },
-  { id: '2', user: 'TechWizard42', text: 'What GPU are you using? The graphics look incredible', timestamp: '2m ago' },
-  { id: '3', user: 'PixelQueen', text: 'First time here, loving the vibes!', timestamp: '1m ago' },
-  { id: '4', user: 'StreamFanatic', text: 'Can you play some requests?', timestamp: '1m ago' },
-  { id: '5', user: 'ProGamer99', text: 'GG! That was an insane play', timestamp: '1m ago' },
-  { id: '6', user: 'ChillVibes', text: 'The music in the background is perfect', timestamp: '45s ago' },
-  { id: '7', user: 'NewViewer2024', text: 'Subbed! Keep up the great content', timestamp: '30s ago' },
-  { id: '8', user: 'GameMaster', text: 'Try the new update, it has great features', timestamp: '15s ago' },
-]
-
-function getSeverityColor(severity?: string) {
-  const s = (severity ?? '').toLowerCase()
-  if (s === 'high' || s === 'critical') return 'text-red-400 bg-red-500/10 border-red-500/30'
-  if (s === 'medium') return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30'
-  return 'text-blue-400 bg-blue-500/10 border-blue-500/30'
-}
+const MODERATION_AGENT = '69a42c6e0ffa5766cb153469'
 
 interface LiveStreamProps {
-  onAgentActive?: (id: string | null) => void
+  streamerName: string
+  onSubscribe: (name: string) => void
+  onNavigateToChannel: (name: string) => void
+  onAgentActive: (id: string | null) => void
 }
 
-export default function LiveStream({ onAgentActive }: LiveStreamProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
-  const [inputText, setInputText] = useState('')
-  const [loading, setLoading] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [msgIdCounter, setMsgIdCounter] = useState(9)
+interface ChatMessage {
+  id: number
+  user: string
+  text: string
+  color: string
+  flagged?: boolean
+  severity?: string
+  reason?: string
+  recommendation?: string
+}
+
+const USER_COLORS = [
+  'text-red-400', 'text-blue-400', 'text-green-400', 'text-pink-400',
+  'text-cyan-400', 'text-amber-400', 'text-violet-400', 'text-emerald-400',
+]
+
+const INITIAL_MESSAGES: ChatMessage[] = [
+  { id: 1, user: 'GameFan99', text: 'This stream is amazing!', color: USER_COLORS[0] },
+  { id: 2, user: 'NightHawk', text: 'Just got here, whats up everyone?', color: USER_COLORS[1] },
+  { id: 3, user: 'PixelDust', text: 'That play was insane omg', color: USER_COLORS[2] },
+  { id: 4, user: 'StreamLover', text: 'Been watching for 2 hours straight', color: USER_COLORS[3] },
+  { id: 5, user: 'CoolVibes', text: 'Can you explain that strategy again?', color: USER_COLORS[4] },
+  { id: 6, user: 'ProPlayer42', text: 'Try flanking from the left side', color: USER_COLORS[5] },
+  { id: 7, user: 'ChillWatcher', text: 'Love the chill vibes tonight', color: USER_COLORS[6] },
+  { id: 8, user: 'NewFollower', text: 'First time here! Great content!', color: USER_COLORS[7] },
+]
+
+export default function LiveStream({ streamerName, onSubscribe, onNavigateToChannel, onAgentActive }: LiveStreamProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES)
+  const [chatInput, setChatInput] = useState('')
+  const [sending, setSending] = useState(false)
+  const [isSubscribed, setIsSubscribed] = useState(false)
+  const [clipTitle, setClipTitle] = useState('')
+  const [showClipForm, setShowClipForm] = useState(false)
+  const [clipSaved, setClipSaved] = useState(false)
+  const [clips, setClips] = useState<string[]>([])
+  const [viewerCount] = useState(847)
+  const chatEndRef = useRef<HTMLDivElement>(null)
+  const msgIdRef = useRef(9)
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const handleSend = async () => {
-    if (!inputText.trim() || loading) return
-    const text = inputText.trim()
-    setInputText('')
-    setLoading(true)
-    onAgentActive?.(AGENT_ID)
-
-    const newId = String(msgIdCounter)
-    setMsgIdCounter((p) => p + 1)
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || sending) return
+    const userMsg = chatInput.trim()
+    setChatInput('')
+    setSending(true)
+    onAgentActive(MODERATION_AGENT)
 
     try {
-      const result = await callAIAgent(text, AGENT_ID)
-      let parsed: Record<string, unknown> = {}
-      if (result.success) {
-        let raw = result.response?.result
-        if (typeof raw === 'string') {
-          try { raw = JSON.parse(raw) } catch { /* use as-is */ }
-        }
-        parsed = (raw && typeof raw === 'object') ? raw as Record<string, unknown> : {}
-      }
+      const result = await callAIAgent(
+        `Check this chat message for moderation: "${userMsg}"`,
+        MODERATION_AGENT
+      )
 
-      const action = (parsed?.action as string ?? '').toLowerCase()
-      const isAllowed = action === 'allow' || action === 'approved' || action === ''
+      let parsed = result?.response?.result
+      if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed) } catch { /* use as-is */ } }
 
-      const msg: ChatMessage = {
-        id: newId,
+      const action = (parsed?.action ?? '').toLowerCase()
+      const severity = parsed?.severity ?? ''
+      const reason = parsed?.reason ?? ''
+      const recommendation = parsed?.recommendation ?? ''
+      const isFlagged = action.includes('flag') || action.includes('block') || action.includes('warn') || action.includes('remove') || action.includes('reject')
+
+      const newMsg: ChatMessage = {
+        id: msgIdRef.current++,
         user: 'You',
-        text,
-        timestamp: 'now',
-        moderation: isAllowed ? undefined : {
-          action: parsed?.action as string ?? '',
-          reason: parsed?.reason as string ?? '',
-          severity: parsed?.severity as string ?? '',
-          flagged_content: parsed?.flagged_content as string ?? '',
-          recommendation: parsed?.recommendation as string ?? '',
-        },
+        text: userMsg,
+        color: 'text-purple-400',
+        flagged: isFlagged,
+        severity: isFlagged ? severity : undefined,
+        reason: isFlagged ? reason : undefined,
+        recommendation: isFlagged ? recommendation : undefined,
       }
-      setMessages((prev) => [...prev, msg])
+      setMessages(prev => [...prev, newMsg])
     } catch {
-      const msg: ChatMessage = {
-        id: newId,
+      const newMsg: ChatMessage = {
+        id: msgIdRef.current++,
         user: 'You',
-        text,
-        timestamp: 'now',
+        text: userMsg,
+        color: 'text-purple-400',
       }
-      setMessages((prev) => [...prev, msg])
+      setMessages(prev => [...prev, newMsg])
     } finally {
-      setLoading(false)
-      onAgentActive?.(null)
+      setSending(false)
+      onAgentActive(null)
     }
+  }
+
+  const handleClipSave = () => {
+    if (!clipTitle.trim()) return
+    setClips(prev => [...prev, clipTitle.trim()])
+    setClipTitle('')
+    setShowClipForm(false)
+    setClipSaved(true)
+    setTimeout(() => setClipSaved(false), 3000)
+  }
+
+  const handleSubscribeClick = () => {
+    setIsSubscribed(prev => !prev)
+    onSubscribe(streamerName)
+  }
+
+  const getSeverityColor = (sev: string) => {
+    const s = (sev ?? '').toLowerCase()
+    if (s.includes('high') || s.includes('critical')) return 'border-red-500/30 bg-red-500/10 text-red-300'
+    if (s.includes('medium')) return 'border-yellow-500/30 bg-yellow-500/10 text-yellow-300'
+    return 'border-blue-500/30 bg-blue-500/10 text-blue-300'
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Video Player Area */}
+    <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          <div className="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-purple-900 via-violet-800 to-indigo-900 flex items-center justify-center shadow-2xl shadow-purple-500/10">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-            <div className="text-center z-10">
-              <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </div>
-              <p className="text-white/60 text-sm">Stream Preview</p>
+          <div className="aspect-video rounded-xl bg-gradient-to-br from-purple-900/40 via-indigo-900/40 to-blue-900/40 border border-border relative overflow-hidden flex items-center justify-center">
+            <div className="text-center opacity-30">
+              <FiUsers className="h-16 w-16 text-purple-400 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Live Stream</p>
             </div>
-            <Badge className="absolute top-4 left-4 bg-red-500 text-white border-none text-sm px-3 py-1 font-semibold">LIVE</Badge>
-            <div className="absolute top-4 right-4 flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1.5">
-              <FiEye className="w-4 h-4 text-white" />
-              <span className="text-white text-sm font-medium">12.4K</span>
-            </div>
+            <Badge className="absolute top-4 left-4 bg-red-500 text-white animate-pulse">LIVE</Badge>
+            <span className="absolute top-4 right-4 text-sm text-foreground bg-black/40 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+              <FiEye className="h-3.5 w-3.5" /> {viewerCount}
+            </span>
           </div>
-          <div className="flex items-center justify-between">
+
+          <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h2 className="text-xl font-bold text-foreground">Epic Gaming Marathon - Day 3</h2>
-              <p className="text-sm text-muted-foreground">StreamerPro | Gaming, Entertainment</p>
+              <h2 className="text-lg font-bold text-foreground">Epic Live Session</h2>
+              <button onClick={() => onNavigateToChannel(streamerName)} className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
+                {streamerName}
+              </button>
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" className="border-border bg-secondary hover:bg-muted gap-2">
-                <FiHeart className="w-4 h-4" />
-                <span>Follow</span>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5 border-purple-500/30 text-purple-300 hover:bg-purple-500/10">
+                <FiGift className="h-4 w-4" /> Tip
               </Button>
-              <Button className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
-                <span>Subscribe</span>
+              <Button
+                onClick={() => setShowClipForm(!showClipForm)}
+                variant="outline"
+                size="sm"
+                className="gap-1.5 border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+              >
+                <FiScissors className="h-4 w-4" /> Clip It!
+              </Button>
+              <Button
+                onClick={handleSubscribeClick}
+                variant={isSubscribed ? 'outline' : 'default'}
+                size="sm"
+                className={isSubscribed ? 'border-purple-500/30 text-purple-300' : 'bg-purple-600 hover:bg-purple-700 text-white'}
+              >
+                <FiHeart className={`h-4 w-4 mr-1 ${isSubscribed ? 'fill-purple-400 text-purple-400' : ''}`} />
+                {isSubscribed ? 'Subscribed' : 'Subscribe'}
               </Button>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1"><FiUsers className="w-4 h-4" /> 12.4K viewers</span>
-            <span className="flex items-center gap-1"><FiShield className="w-4 h-4 text-green-400" /> Chat Moderation Active</span>
-          </div>
+
+          {showClipForm && (
+            <div className="p-3 rounded-lg bg-muted/30 border border-border flex items-center gap-2">
+              <Input
+                value={clipTitle}
+                onChange={e => setClipTitle(e.target.value)}
+                placeholder="Name this clip..."
+                className="bg-muted/50 border-border text-sm"
+                onKeyDown={e => e.key === 'Enter' && handleClipSave()}
+              />
+              <Button size="sm" onClick={handleClipSave} disabled={!clipTitle.trim()} className="bg-purple-600 hover:bg-purple-700 text-white">Save</Button>
+            </div>
+          )}
+
+          {clipSaved && (
+            <div className="p-2.5 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-300">
+              Clip saved! ({clips.length} clips total)
+            </div>
+          )}
         </div>
 
-        {/* Chat Panel */}
-        <Card className="bg-card border-border flex flex-col h-[600px] lg:h-auto shadow-lg">
-          <CardHeader className="pb-3 border-b border-border">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <FiShield className="w-4 h-4 text-accent" />
-              Live Chat
-              <Badge variant="secondary" className="ml-auto text-xs bg-secondary text-muted-foreground">{messages.length} msgs</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-hidden p-0">
-            <div ref={scrollRef} className="h-[420px] overflow-y-auto px-4 py-3 space-y-3">
-              {messages.map((msg) => (
+        <div className="lg:col-span-1 flex flex-col rounded-xl border border-border bg-card overflow-hidden h-[calc(100vh-140px)] lg:h-auto lg:min-h-[500px]">
+          <div className="p-3 border-b border-border flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FiShield className="h-4 w-4 text-purple-400" />
+              <span className="text-sm font-semibold text-foreground">Live Chat</span>
+            </div>
+            <span className="text-xs text-muted-foreground">{messages.length} messages</span>
+          </div>
+
+          <ScrollArea className="flex-1 p-3">
+            <div className="space-y-2">
+              {messages.map(msg => (
                 <div key={msg.id}>
-                  <div className={`flex items-start gap-2 ${msg.user === 'You' ? 'justify-end' : ''}`}>
-                    <div className={`max-w-[85%] ${msg.user === 'You' ? 'bg-accent/20 border border-accent/30' : 'bg-secondary'} rounded-xl px-3 py-2`}>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className={`text-xs font-semibold ${msg.user === 'You' ? 'text-accent' : 'text-purple-400'}`}>{msg.user}</span>
-                        <span className="text-xs text-muted-foreground">{msg.timestamp}</span>
-                      </div>
-                      <p className="text-sm text-foreground">{msg.text}</p>
-                    </div>
+                  <div className="flex gap-2 text-sm">
+                    <span className={`font-medium flex-shrink-0 ${msg.color}`}>{msg.user}:</span>
+                    <span className="text-foreground/90 break-words">{msg.text}</span>
                   </div>
-                  {msg.moderation && (
-                    <div className={`mt-1.5 ml-2 p-2.5 rounded-lg border text-xs ${getSeverityColor(msg.moderation.severity)}`}>
-                      <div className="flex items-center gap-1.5 mb-1 font-semibold">
-                        <FiAlertTriangle className="w-3.5 h-3.5" />
-                        Moderation: {msg.moderation.action}
-                        {msg.moderation.severity && (
-                          <Badge variant="outline" className="ml-1 text-xs px-1.5 py-0 border-current">{msg.moderation.severity}</Badge>
-                        )}
+                  {msg.flagged && (
+                    <div className={`mt-1 ml-4 p-2 rounded-md border text-xs flex items-start gap-1.5 ${getSeverityColor(msg.severity ?? '')}`}>
+                      <FiAlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <span className="font-medium">Moderation Alert</span>
+                        {msg.severity && <span className="ml-1 opacity-75">({msg.severity})</span>}
+                        {msg.reason && <p className="mt-0.5 opacity-80">{msg.reason}</p>}
+                        {msg.recommendation && <p className="mt-0.5 opacity-70 italic">{msg.recommendation}</p>}
                       </div>
-                      {msg.moderation.reason && <p className="opacity-80">Reason: {msg.moderation.reason}</p>}
-                      {msg.moderation.recommendation && <p className="opacity-70 mt-0.5">Recommendation: {msg.moderation.recommendation}</p>}
                     </div>
                   )}
                 </div>
               ))}
-              {loading && (
+              {sending && (
                 <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                  <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                  <div className="w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
                   Checking message...
                 </div>
               )}
+              <div ref={chatEndRef} />
             </div>
-          </CardContent>
-          <div className="p-3 border-t border-border">
-            <div className="flex gap-2">
-              <Input
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Type a message..."
-                className="bg-input border-border text-sm"
-                disabled={loading}
-              />
-              <Button size="icon" onClick={handleSend} disabled={loading || !inputText.trim()} className="bg-accent text-accent-foreground hover:bg-accent/90 flex-shrink-0">
-                <FiSend className="w-4 h-4" />
-              </Button>
-            </div>
+          </ScrollArea>
+
+          <div className="p-3 pt-2">
+            <AdBanner variant="sidebar" />
           </div>
-        </Card>
+
+          <div className="p-3 border-t border-border">
+            <form onSubmit={e => { e.preventDefault(); handleSendMessage() }} className="flex gap-2">
+              <Input
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                placeholder="Send a message..."
+                className="bg-muted/50 border-border text-sm"
+                disabled={sending}
+              />
+              <Button type="submit" size="sm" disabled={!chatInput.trim() || sending} className="bg-purple-600 hover:bg-purple-700 text-white px-3">
+                <FiSend className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   )

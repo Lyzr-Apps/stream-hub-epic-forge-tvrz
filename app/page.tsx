@@ -4,11 +4,17 @@ import React, { useState, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import HeroNav from './sections/HeroNav'
-import ContentDiscovery from './sections/ContentDiscovery'
+import Navbar from './sections/Navbar'
+import HomePage from './sections/HomePage'
 import LiveStream from './sections/LiveStream'
+import GoLive from './sections/GoLive'
+import ChannelPage from './sections/ChannelPage'
+import Categories from './sections/Categories'
+import Search from './sections/Search'
+import Subscriptions from './sections/Subscriptions'
 import CreatorStudio from './sections/CreatorStudio'
 import StoreAdvisor from './sections/StoreAdvisor'
+import Notifications from './sections/Notifications'
 import { FiRadio, FiActivity } from 'react-icons/fi'
 
 class ErrorBoundary extends React.Component<
@@ -43,7 +49,7 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-const agents = [
+const AGENTS = [
   { id: '69a42c6d34e600fdb1dca356', name: 'Content Recommendation', purpose: 'Personalized content discovery' },
   { id: '69a42c6e2ace987a4add1cbc', name: 'Creator Studio Assistant', purpose: 'Analytics and content strategy' },
   { id: '69a42c6e0ffa5766cb153469', name: 'Chat Moderation', purpose: 'Real-time chat safety' },
@@ -52,6 +58,11 @@ const agents = [
 
 export default function Page() {
   const [activeTab, setActiveTab] = useState('home')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [subscriptions, setSubscriptions] = useState<string[]>(['StreamerPro', 'NightOwlGamer', 'TechWizard42', 'PixelQueen'])
+  const [selectedChannel, setSelectedChannel] = useState('')
+  const [selectedStreamer, setSelectedStreamer] = useState('')
+  const [showNotifications, setShowNotifications] = useState(false)
   const [activeAgentId, setActiveAgentId] = useState<string | null>(null)
   const [showSampleData, setShowSampleData] = useState(false)
 
@@ -59,54 +70,97 @@ export default function Page() {
     setActiveAgentId(id)
   }, [])
 
+  const handleSubscribe = useCallback((name: string) => {
+    setSubscriptions(prev =>
+      prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]
+    )
+  }, [])
+
+  const handleNavigateToChannel = useCallback((name: string) => {
+    if (!name) return
+    setSelectedChannel(name)
+    setActiveTab('channel')
+  }, [])
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query)
+    setActiveTab('search')
+  }, [])
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-background text-foreground font-sans">
-        <HeroNav activeTab={activeTab} onTabChange={setActiveTab} />
+        <Navbar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          searchQuery={searchQuery}
+          onSearch={handleSearch}
+          onNotificationClick={() => setShowNotifications(!showNotifications)}
+          notificationCount={5}
+        />
+        <Notifications isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
 
-        {/* Sample Data Toggle */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <div className="max-w-7xl mx-auto px-4 pt-3">
           <div className="flex items-center justify-end gap-2">
             <Label htmlFor="sample-toggle" className="text-xs text-muted-foreground">Sample Data</Label>
-            <Switch
-              id="sample-toggle"
-              checked={showSampleData}
-              onCheckedChange={setShowSampleData}
-            />
+            <Switch id="sample-toggle" checked={showSampleData} onCheckedChange={setShowSampleData} />
           </div>
         </div>
 
-        {/* Active Tab Content */}
-        <main>
-          {activeTab === 'home' && <ContentDiscovery onAgentActive={handleAgentActive} />}
-          {activeTab === 'live' && <LiveStream onAgentActive={handleAgentActive} />}
+        <main className="pb-4">
+          {activeTab === 'home' && <HomePage onNavigateToChannel={handleNavigateToChannel} onAgentActive={handleAgentActive} />}
+          {activeTab === 'live' && (
+            <LiveStream
+              streamerName={selectedStreamer || 'StreamerPro'}
+              onSubscribe={handleSubscribe}
+              onNavigateToChannel={handleNavigateToChannel}
+              onAgentActive={handleAgentActive}
+            />
+          )}
+          {activeTab === 'golive' && <GoLive onAgentActive={handleAgentActive} />}
+          {activeTab === 'channel' && (
+            <ChannelPage
+              channelName={selectedChannel || 'StreamerPro'}
+              isSubscribed={subscriptions.includes(selectedChannel || 'StreamerPro')}
+              onSubscribe={handleSubscribe}
+              onBack={() => setActiveTab('home')}
+            />
+          )}
+          {activeTab === 'categories' && <Categories onNavigateToChannel={handleNavigateToChannel} onAgentActive={handleAgentActive} />}
+          {activeTab === 'search' && <Search query={searchQuery} onNavigateToChannel={handleNavigateToChannel} onAgentActive={handleAgentActive} />}
+          {activeTab === 'subscriptions' && (
+            <Subscriptions
+              subscriptions={subscriptions}
+              onNavigateToChannel={handleNavigateToChannel}
+              onUnsubscribe={handleSubscribe}
+            />
+          )}
           {activeTab === 'studio' && <CreatorStudio onAgentActive={handleAgentActive} />}
           {activeTab === 'store' && <StoreAdvisor onAgentActive={handleAgentActive} />}
         </main>
 
-        {/* Agent Status Panel */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Card className="bg-card border-border shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 pb-6">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">
-                <FiRadio className="w-4 h-4 text-accent" />
+                <FiRadio className="h-4 w-4 text-purple-400" />
                 <span className="text-sm font-semibold text-foreground">AI Agents</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {agents.map((agent) => {
+                {AGENTS.map(agent => {
                   const isActive = activeAgentId === agent.id
                   return (
                     <div
                       key={agent.id}
-                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 ${isActive ? 'border-accent bg-accent/10' : 'border-border bg-secondary/50'}`}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 ${isActive ? 'border-purple-500/30 bg-purple-500/10' : 'border-border bg-muted/20'}`}
                     >
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? 'bg-accent animate-pulse' : 'bg-muted-foreground/40'}`} />
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? 'bg-purple-400 animate-pulse' : 'bg-muted-foreground/40'}`} />
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-foreground truncate">{agent.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{agent.purpose}</p>
                       </div>
                       {isActive && (
-                        <FiActivity className="w-3.5 h-3.5 text-accent flex-shrink-0 animate-pulse ml-auto" />
+                        <FiActivity className="h-3.5 w-3.5 text-purple-400 flex-shrink-0 animate-pulse ml-auto" />
                       )}
                     </div>
                   )
