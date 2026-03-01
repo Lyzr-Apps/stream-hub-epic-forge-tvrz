@@ -1,0 +1,54 @@
+{
+  "agent_name": "Content Recommendation Agent",
+  "agent_id": "69a42c6d34e600fdb1dca356",
+  "description": "Analyzes viewer watch history, preferences, and trending content to generate personalized content rows and category recommendations for the Netflix-style browse interface",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "status": "string",
+    "recommendations": [
+      {
+        "category": "string",
+        "title": "string",
+        "items": [
+          {
+            "content_id": "string",
+            "title": "string",
+            "creator": "string",
+            "thumbnail_description": "string",
+            "type": "string",
+            "viewers": "string",
+            "duration": "string",
+            "tags": [
+              "string"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "example_response": {
+    "status": "sample string",
+    "recommendations": [
+      {
+        "category": "sample string",
+        "title": "sample string",
+        "items": [
+          {
+            "content_id": "sample string",
+            "title": "sample string",
+            "creator": "sample string",
+            "thumbnail_description": "sample string",
+            "type": "sample string",
+            "viewers": "sample string",
+            "duration": "sample string",
+            "tags": [
+              "sample string"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

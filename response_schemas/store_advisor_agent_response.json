@@ -1,0 +1,44 @@
+{
+  "agent_name": "Store Advisor Agent",
+  "agent_id": "69a42c6ec624d66f1359bd68",
+  "description": "Helps eligible creators optimize their store \u2014 suggests pricing, writes product descriptions, recommends store layout, and provides sales performance insights",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "advice": "string",
+    "suggestions": [
+      {
+        "area": "string",
+        "current_status": "string",
+        "recommendation": "string",
+        "expected_impact": "string"
+      }
+    ],
+    "pricing_tips": [
+      "string"
+    ]
+  },
+  "example_response": {
+    "advice": "sample string",
+    "suggestions": [
+      {
+        "area": "sample string",
+        "current_status": "sample string",
+        "recommendation": "sample string",
+        "expected_impact": "sample string"
+      }
+    ],
+    "pricing_tips": [
+      "sample string"
+    ]
+  },
+  "has_module_outputs": true,
+  "module_outputs_example": {
+    "artifact_files": [
+      {
+        "file_url": "https://example.com/image.png"
+      }
+    ]
+  }
+}

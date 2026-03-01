@@ -1,0 +1,36 @@
+{
+  "agent_name": "Creator Studio Assistant Agent",
+  "agent_id": "69a42c6e2ace987a4add1cbc",
+  "description": "Conversational agent helping creators understand their analytics, optimize titles/thumbnails/tags, plan upload schedules, and interpret revenue data within the Studio dashboard",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "message": "string",
+    "insights": [
+      {
+        "metric": "string",
+        "value": "string",
+        "trend": "string",
+        "suggestion": "string"
+      }
+    ],
+    "action_items": [
+      "string"
+    ]
+  },
+  "example_response": {
+    "message": "sample string",
+    "insights": [
+      {
+        "metric": "sample string",
+        "value": "sample string",
+        "trend": "sample string",
+        "suggestion": "sample string"
+      }
+    ],
+    "action_items": [
+      "sample string"
+    ]
+  }
+}

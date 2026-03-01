@@ -1,0 +1,52 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "type": "Input",
+      "label": "User Input",
+      "nodeCategory": "input"
+    },
+    {
+      "id": "content_recommendation_agent",
+      "type": "Agent",
+      "label": "Content Recommendation Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "creator_studio_agent",
+      "type": "Agent",
+      "label": "Creator Studio Assistant Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "chat_moderation_agent",
+      "type": "Agent",
+      "label": "Chat Moderation Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "store_advisor_agent",
+      "type": "Agent",
+      "label": "Store Advisor Agent",
+      "nodeCategory": "agent"
+    }
+  ],
+  "edges": [
+    {
+      "source": "input_node",
+      "target": "content_recommendation_agent"
+    },
+    {
+      "source": "input_node",
+      "target": "creator_studio_agent"
+    },
+    {
+      "source": "input_node",
+      "target": "chat_moderation_agent"
+    },
+    {
+      "source": "input_node",
+      "target": "store_advisor_agent"
+    }
+  ]
+}

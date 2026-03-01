@@ -1,0 +1,46 @@
+{
+  "agents": {
+    "Content Recommendation Agent": {
+      "agent_id": "69a42c6d34e600fdb1dca356",
+      "node_id": "content_recommendation_agent",
+      "provider": "openai",
+      "model": "gpt-4.1",
+      "temperature": 0.4,
+      "top_p": 0.95,
+      "type": "text",
+      "trigger": "Page load on Homepage / Browse"
+    },
+    "Creator Studio Assistant Agent": {
+      "agent_id": "69a42c6e2ace987a4add1cbc",
+      "node_id": "creator_studio_agent",
+      "provider": "openai",
+      "model": "gpt-4.1",
+      "temperature": 0.5,
+      "top_p": 0.95,
+      "type": "text",
+      "trigger": "Chat input in Creator Studio"
+    },
+    "Chat Moderation Agent": {
+      "agent_id": "69a42c6e0ffa5766cb153469",
+      "node_id": "chat_moderation_agent",
+      "provider": "openai",
+      "model": "gpt-4.1",
+      "temperature": 0.2,
+      "top_p": 1,
+      "type": "text",
+      "trigger": "Automatic during live streams"
+    },
+    "Store Advisor Agent": {
+      "agent_id": "69a42c6ec624d66f1359bd68",
+      "node_id": "store_advisor_agent",
+      "provider": "openai",
+      "model": "gpt-4.1",
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "type": "text",
+      "trigger": "Chat input in Store Management"
+    }
+  },
+  "workflow_pattern": "multiple_independent",
+  "total_agents": 4
+}
